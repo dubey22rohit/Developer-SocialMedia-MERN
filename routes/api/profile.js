@@ -3,7 +3,7 @@ const router = express.Router()
 const auth = require('../../middleware/auth')
 const User = require('../../models/User')
 const { check, validationResult } = require('express-validator')
-const Profile = require('../../models/User')
+const Profile = require('../../models/Profile')
 //@route GET api/profile/me
 //@desc GET CURRENT USER's profile
 //@access PRIVATE
@@ -46,8 +46,30 @@ router.post('/', [auth, [
         if (skills) {
             profileFields.skills = skills.split(',').map(skill => skill.trim());
         }
-        console.log(profileFields.skills)
-        res.send('Hello')
+
+        //Build Social Object
+        profileFields.social = {}
+        if (youtube) profileFields.social.youtube = youtube
+        if (twitter) profileFields.social.twitter = twitter
+        if (instagram) profileFields.social.instagram = instagram
+        if (facebook) profileFields.social.facebook = facebook
+        if (linkedin) profileFields.social.linkedin = linkedin
+
+        try {
+            let profile = await Profile.findOne({ user: req.user.id })
+            if (profile) {
+                //update
+                profile = await Profile.findOneAndUpdate({ user: req.user.id }, { $set: profileFields }, { new: true })
+                return res.json(profile)
+            }
+            //Create
+            profile = new Profile(profileFields)
+            await profile.save()
+            res.json(profile)
+        } catch (err) {
+            console.error(err.message)
+            res.status(500).send('Server Error')
+        }
     })
 
 module.exports = router;
